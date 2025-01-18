@@ -16,6 +16,21 @@ provider "google" {
 resource "google_project_service" "compute_engine" {
   project = var.project_id
   service = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Enable Vertex AI API
+resource "google_project_service" "vertex_ai" {
+  project = var.project_id
+  service = "aiplatform.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Enable Notebooks API
+resource "google_project_service" "notebooks" {
+  project = var.project_id
+  service = "notebooks.googleapis.com"
+  disable_on_destroy = false
 }
 
 resource "google_compute_network" "vpc_network" {
