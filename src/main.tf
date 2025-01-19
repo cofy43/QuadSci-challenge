@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.38.0"
+      version = "6.0.1"
     }
   }
 }
@@ -24,6 +24,7 @@ resource "google_project_service" "vertex_ai" {
   project = var.project_id
   service = "aiplatform.googleapis.com"
   disable_on_destroy = false
+  depends_on = [google_project_service.compute_engine]
 }
 
 # Enable Notebooks API
@@ -31,6 +32,15 @@ resource "google_project_service" "notebooks" {
   project = var.project_id
   service = "notebooks.googleapis.com"
   disable_on_destroy = false
+  depends_on = [google_project_service.compute_engine]
+}
+
+# Enable Cloud Logging API
+resource "google_project_service" "cloud_logging" {
+  project = var.project_id
+  service = "logging.googleapis.com"
+  disable_on_destroy = false
+  depends_on = [google_project_service.compute_engine]
 }
 
 resource "google_compute_network" "vpc_network" {
@@ -45,20 +55,22 @@ resource "google_compute_subnetwork" "vertex_ai_subnet" {
   region        = var.region
   network       = google_compute_network.vpc_network.id
   depends_on    = [google_project_service.compute_engine]
+  private_ip_google_access = true
 }
 
-resource "google_compute_subnetwork" "cloud_run_subnet" {
-  name          = "cloud-run-subnet"
-  ip_cidr_range = "10.0.2.0/24"
-  region        = var.region
-  network       = google_compute_network.vpc_network.id
-  depends_on    = [google_project_service.compute_engine]
-}
+resource "google_workbench_instance" "instance" {
+  name = "workbench-instance"
+  location = var.zone
+  disable_proxy_access = true
 
-resource "google_compute_subnetwork" "gke_subnet" {
-  name          = "gke-subnet"
-  ip_cidr_range = "10.0.3.0/24"
-  region        = var.region
-  network       = google_compute_network.vpc_network.id
-  depends_on    = [google_project_service.compute_engine]
+  gce_setup {
+    machine_type = "e2-standard-4"
+    disable_public_ip = true
+
+    network_interfaces {
+      network = google_compute_network.vpc_network.id
+      subnet = google_compute_subnetwork.vertex_ai_subnet.id
+      nic_type = "GVNIC"
+    }
+  }
 }
