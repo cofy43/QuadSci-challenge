@@ -12,3 +12,13 @@ variable "zone" {
   description = "The GCP zone"
   type        = string
 }
+
+variable "admin_members" {
+  description = "List of members with admin access to the Workbench instance"
+  type        = list(string)
+}
+
+variable "user_members" {
+  description = "List of members with viewer access to the Workbench instance"
+  type        = list(string)
+}

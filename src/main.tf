@@ -43,6 +43,14 @@ resource "google_project_service" "cloud_logging" {
   depends_on = [google_project_service.compute_engine]
 }
 
+# Enable IAM API
+resource "google_project_service" "iam" {
+  project = var.project_id
+  service = "iam.googleapis.com"
+  disable_on_destroy = false
+  depends_on = [google_project_service.compute_engine]
+}
+
 resource "google_compute_network" "vpc_network" {
   name                    = "main-vpc-network"
   auto_create_subnetworks = false
@@ -73,4 +81,19 @@ resource "google_workbench_instance" "instance" {
       nic_type = "GVNIC"
     }
   }
+}
+
+# IAM policy to allow specific roles to manage the workbench instance
+resource "google_project_iam_binding" "workbench_instance_admin" {
+  project = var.project_id
+  role    = "roles/notebooks.admin"
+
+  members = var.admin_members
+}
+
+resource "google_project_iam_binding" "workbench_instance_user" {
+  project = var.project_id
+  role    = "roles/notebooks.viewer"
+
+  members = var.user_members
 }

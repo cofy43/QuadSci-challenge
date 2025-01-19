@@ -1,3 +1,9 @@
 project_id = "your-gcp-project-id"
 region     = "us-central1"
 zone       = "us-central1-a"
+admin_members = [
+  "user:your-email@example.com",
+]
+user_members = [
+  "user:another-email@example.com"
+]
