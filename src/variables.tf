@@ -22,3 +22,12 @@ variable "user_members" {
   description = "List of members with viewer access to the Workbench instance"
   type        = list(string)
 }
+variable "cloud_run_admin_members" {
+  description = "List of members with admin access to the Cloud Run service"
+  type        = list(string)
+}
+
+variable "cloud_run_invoker_members" {
+  description = "List of members with viewer access to the Cloud Run service"
+  type        = list(string)
+}

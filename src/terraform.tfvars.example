@@ -7,3 +7,9 @@ admin_members = [
 user_members = [
   "user:another-email@example.com"
 ]
+cloud_run_admin_members = [
+  "user:your-email@example.com",
+]
+cloud_run_invoker_members = [
+  "user:another-email@example.com"
+]

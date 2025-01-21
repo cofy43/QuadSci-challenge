@@ -123,6 +123,21 @@ resource "google_project_iam_binding" "workbench_instance_user" {
   members = var.user_members
 }
 
+# IAM policy to Cloud Run Service
+resource "google_project_iam_binding" "cloud_run_admin_role" {
+  project = var.project_id
+  role    = "roles/run.admin"
+
+  members  = var.cloud_run_admin_members
+}
+
+resource "google_project_iam_binding" "cloud_run_invoker" {
+  project  = var.project_id
+  role     = "roles/run.invoker"
+
+  members = var.cloud_run_invoker_members
+}
+
 ######################
 # Vertex AI Instance #
 ######################
