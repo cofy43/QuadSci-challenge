@@ -13,13 +13,13 @@ variable "zone" {
   type        = string
 }
 
-variable "admin_members" {
-  description = "List of members with admin access to the Workbench instance"
+variable "vertex_ia_admin_members" {
+  description = "List of members with admin access to Vertex AI instance"
   type        = list(string)
 }
 
-variable "user_members" {
-  description = "List of members with viewer access to the Workbench instance"
+variable "vertex_ia_user_members" {
+  description = "List of members with viewer access to Vertex AI instance"
   type        = list(string)
 }
 variable "cloud_run_admin_members" {

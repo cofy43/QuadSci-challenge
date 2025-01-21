@@ -113,14 +113,14 @@ resource "google_project_iam_binding" "workbench_instance_admin" {
   project = var.project_id
   role    = "roles/notebooks.admin"
 
-  members = var.admin_members
+  members = var.vertex_ia_admin_members
 }
 
 resource "google_project_iam_binding" "workbench_instance_user" {
   project = var.project_id
   role    = "roles/notebooks.viewer"
 
-  members = var.user_members
+  members = var.vertex_ia_user_members
 }
 
 # IAM policy to Cloud Run Service
