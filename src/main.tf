@@ -154,7 +154,10 @@ resource "google_workbench_instance" "instance" {
     network_interfaces {
       network = google_compute_network.vpc_network.id
       subnet = google_compute_subnetwork.vertex_ai_subnet.id
-      nic_type = "GVNIC"
+    }
+
+    metadata = {
+      enable-oslogin = false
     }
   }
 }
