@@ -85,23 +85,11 @@ resource "google_compute_subnetwork" "vertex_ai_subnet" {
 
 resource "google_compute_subnetwork" "cloud_run_subnet" {
   name          = "cloud-run-subnet"
-  ip_cidr_range = "10.0.2.0/28"
+  ip_cidr_range = "10.4.0.0/24"
   region        = var.region
   network       = google_compute_network.vpc_network.id
   depends_on    = [google_project_service.compute_engine]
   private_ip_google_access = true
-}
-
-# VPC Access Connector to Cloud Run Service
-resource "google_vpc_access_connector" "connector" {
-  name          = "run-vpc"
-  subnet {
-    name = google_compute_subnetwork.cloud_run_subnet.name
-  }
-  machine_type = "e2-standard-4"
-  min_instances = 2
-  max_instances = 3
-  region        = var.region
 }
 
 ##########################
@@ -165,7 +153,6 @@ resource "google_workbench_instance" "instance" {
 ######################
 # Cloud Run Service  #
 ######################
-
 resource "google_cloud_run_v2_service" "default" {
   name     = "cloudrun-service"
   location = "us-central1"
@@ -176,8 +163,11 @@ resource "google_cloud_run_v2_service" "default" {
       image = "crccheck/hello-world"
     }
     vpc_access{
-      connector = google_vpc_access_connector.connector.id
-      egress = "PRIVATE_RANGES_ONLY"
+      network_interfaces {
+        network = google_compute_network.vpc_network.id
+        subnetwork = google_compute_subnetwork.cloud_run_subnet.id
+      }
+      egress = "ALL_TRAFFIC"
     }
   }
 }
