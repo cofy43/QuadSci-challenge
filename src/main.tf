@@ -168,7 +168,7 @@ resource "google_workbench_instance" "instance" {
 ######################
 resource "google_cloud_run_v2_service" "default" {
   name     = "cloudrun-service"
-  location = "us-central1"
+  location = var.region
   ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 
   template {
