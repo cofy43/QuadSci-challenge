@@ -159,6 +159,7 @@ resource "google_workbench_instance" "instance" {
 
     metadata = {
       enable-oslogin = false
+      # ssh-key = ""
     }
   }
 }
@@ -183,4 +184,72 @@ resource "google_cloud_run_v2_service" "default" {
       egress = "ALL_TRAFFIC"
     }
   }
+}
+
+###################
+# Test Vertex AI  #
+###################
+resource "google_compute_instance" "bastion_host" {
+  name         = "bastion-vertex-ai"
+  machine_type = "e2-medium"
+  zone         = var.zone
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-11"
+    }
+  }
+
+  network_interface {
+    network       = google_compute_network.vpc_network.id
+    subnetwork    = google_compute_subnetwork.vertex_ai_subnet.id
+    access_config {}
+  }
+
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${var.public_ssh_key}"
+  }
+}
+
+output "bastion_host_private_ip" {
+  value = google_compute_instance.bastion_host.network_interface[0].network_ip
+}
+
+###################
+# Test Cloud Run  #
+###################
+resource "google_compute_firewall" "allow_internal_ssh" {
+  name    = "allow-internal-ssh"
+  network = google_compute_network.vpc_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["10.0.1.0/24"]
+}
+
+resource "google_compute_firewall" "allow_internal_http" {
+  name    = "allow-internal-http"
+  network = google_compute_network.vpc_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8080"]
+  }
+
+  source_ranges = ["10.0.1.0/24"]
+}
+
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "allow-ssh"
+  network = google_compute_network.vpc_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
 }

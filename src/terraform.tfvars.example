@@ -13,3 +13,6 @@ cloud_run_admin_members = [
 cloud_run_invoker_members = [
   "user:another-email@example.com"
 ]
+# To test services
+ssh_user= ""
+public_ssh_key = ""

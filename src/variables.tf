@@ -31,3 +31,13 @@ variable "cloud_run_invoker_members" {
   description = "List of members with viewer access to the Cloud Run service"
   type        = list(string)
 }
+
+variable "ssh_user" {
+  description = "The SSH user to use for the instance"
+  type        = string
+}
+
+variable "public_ssh_key" {
+  description = "The public SSH key to use for the instance"
+  type        = string
+}
