@@ -253,3 +253,33 @@ resource "google_compute_firewall" "allow_ssh" {
 
   source_ranges = ["0.0.0.0/0"]
 }
+
+##################
+# Test Cloud run #
+##################
+resource "google_compute_instance" "cloud_run_instance" {
+  name         = "cloud-run-instance"
+  machine_type = "e2-medium"
+  zone         = var.zone
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-11"
+    }
+  }
+
+  network_interface {
+    network       = google_compute_network.vpc_network.id
+    subnetwork    = google_compute_subnetwork.cloud_run_subnet.id
+    access_config {}
+  }
+
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${var.public_ssh_key}"
+  }
+}
+
+output "bastion_host_private_ip" {
+  value = google_compute_instance.cloud_run_instance.network_interface[0].network_ip
+}
+
