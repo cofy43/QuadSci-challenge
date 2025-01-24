@@ -68,6 +68,13 @@ resource "google_project_service" "cloud_run" {
   depends_on = [google_project_service.compute_engine]
 }
 
+resource "google_project_service" "container" {
+  project = var.project_id
+  service = "container.googleapis.com"
+  disable_on_destroy = false
+  depends_on = [google_project_service.compute_engine]
+}
+
 ########################
 #     Google VPC       #
 ########################
@@ -183,4 +190,211 @@ resource "google_cloud_run_v2_service" "default" {
       egress = "ALL_TRAFFIC"
     }
   }
+}
+
+######################
+#   Daks clouster    #
+######################
+resource "google_service_account" "service-account" {
+  account_id   = "dask-service-account"
+  display_name = "Dask Service Account"
+}
+
+resource "google_project_iam_member" "service_account_role" {
+  project = var.project_id
+  role    = "roles/container.admin"
+  member  = "serviceAccount:${google_service_account.service-account.email}"
+}
+
+resource "google_service_account_key" "default" {
+  service_account_id = google_service_account.service-account.name
+  public_key_type    = "TYPE_X509_PEM_FILE"
+}
+
+resource "google_project_iam_binding" "dask_helm_deployer_binding" {
+  project = var.project_id
+  role    = "roles/container.admin"
+
+  members = [
+    "serviceAccount:${google_service_account.service-account.email}"
+  ]
+}
+
+resource "google_container_cluster" "primary" {
+  name     = "my-gke-cluster"
+  location = var.zone
+  initial_node_count = 1
+
+  node_config {
+    machine_type = "n1-standard-2"
+    disk_size_gb = 100
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+    service_account = google_service_account.service-account.email
+  }
+
+  network = google_compute_network.vpc_network.id
+  subnetwork = google_compute_subnetwork.dask_clouster_subnet.id
+  depends_on = [google_project_service.container]
+}
+
+resource "google_compute_firewall" "allow_dask_scheduler" {
+  name    = "allow-dask-scheduler"
+  network = google_compute_network.vpc_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8786", "8787"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["dask-scheduler"]
+}
+
+data "google_client_config" "default" {}
+
+provider "kubernetes" {
+  host                   = "https://${google_container_cluster.primary.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  client_certificate     = base64decode(google_container_cluster.primary.master_auth.0.client_certificate)
+  client_key             = base64decode(google_container_cluster.primary.master_auth.0.client_key)
+  cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth.0.cluster_ca_certificate)
+}
+
+resource "kubernetes_deployment" "dask-shedulers" {
+  metadata {
+    name = "dask-shedulers"
+  }
+  spec {
+    replicas = "1"
+    selector {
+      match_labels = {
+        app = "dask-shedulers"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "dask-shedulers"
+        }
+      }
+
+      spec {
+        container {
+          name  = "dask-shedule"
+          image = "daskdev/dask:latest"
+          args = ["dask-scheduler"]
+          env {
+            name  = "EXTRA_PIP_PACKAGES"
+            value = "gcsfs"
+          }
+          port {
+            name = "tpc-comm"
+            container_port = 8786
+            protocol = "TCP"
+          }
+          port {
+            name = "http-dashboard"
+            container_port = 8787
+            protocol = "TCP"
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = "http-dashboard"
+            }
+            initial_delay_seconds = 10
+            period_seconds = 5
+          }
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = "http-dashboard"
+            }
+            initial_delay_seconds = 10
+            period_seconds = 5
+          }
+        }
+      }
+
+    }
+  }
+
+  depends_on = [ google_container_cluster.primary ]
+}
+
+resource "kubernetes_service" "dask-scheduler-service" {
+  metadata {
+    name = "dask-scheduler-service"
+  }
+  spec {
+    type = "ClusterIP"
+    selector = {
+      name: "simple"
+      component: kubernetes_deployment.dask-shedulers.metadata.0.name
+      app: "dask-scheduler"
+    }
+    port {
+      name = "tpc-comm"
+      port = 8786
+      protocol = "TCP"
+      target_port = "tcp-comm"
+    }
+    port {
+      name = "http-dashboard"
+      port = 8787
+      protocol = "TCP"
+      target_port = "http-dashboard"
+    }
+  }
+
+  depends_on = [ kubernetes_deployment.dask-shedulers ]
+}
+
+resource "kubernetes_deployment" "dask-workers" {
+  metadata {
+    name = "dask-workers"
+  }
+  spec {
+    replicas = "2"
+    selector {
+      match_labels = {
+        app = "dask-worker"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "dask-worker"
+        }
+      }
+
+      spec {
+        container {
+          name  = "dask-worker"
+          image = "daskdev/dask:latest"
+          args = [  
+              "dask-worker", 
+              "--name",
+              "$(DASK_WORKER_NAME)",
+              "--dashboard",
+              "--dashboard-address",
+              "tcp://dask-scheduler-service:8786"]
+          env {
+            name  = "EXTRA_PIP_PACKAGES"
+            value = "gcsfs"
+          }
+          port {
+            name = "http-dashboard"
+            container_port = 8788
+            protocol = "TCP"
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [ kubernetes_service.dask-scheduler-service ]
 }
