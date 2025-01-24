@@ -1,0 +1,15 @@
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+zone       = "us-central1-a"
+vertex_ia_admin_members = [
+  "user:your-email@example.com",
+]
+vertex_ia_user_members = [
+  "user:another-email@example.com"
+]
+cloud_run_admin_members = [
+  "user:your-email@example.com",
+]
+cloud_run_invoker_members = [
+  "user:another-email@example.com"
+]

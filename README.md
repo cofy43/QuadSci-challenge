@@ -51,3 +51,15 @@ Configure routes to allow internal traffic between services and to the Internet 
 1. Clone this repository.
 2. Configure your GCP credentials.
 3. Run the Terraform script to provision the resources.
+
+# Dependencies:
+
+- Terraform v1.7.5
+
+# Commands:
+
+```bash
+cd src
+terraform plan
+terraform apply
+```
