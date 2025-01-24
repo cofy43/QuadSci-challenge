@@ -73,14 +73,14 @@ resource "google_project_service" "cloud_run" {
 ########################
 
 resource "google_compute_network" "vpc_network" {
-  name                    = "main-vpc-network"
+  name                    = "vpc-project-network"
   auto_create_subnetworks = false
   depends_on              = [google_project_service.compute_engine]
 }
 
 resource "google_compute_subnetwork" "vertex_ai_subnet" {
-  name          = "vertex-ai-subnet"
-  ip_cidr_range = "10.0.1.0/24"
+  name          = "vertex-instance-subnet"
+  ip_cidr_range = "10.1.0.0/24"
   region        = var.region
   network       = google_compute_network.vpc_network.id
   depends_on    = [google_project_service.compute_engine]
@@ -88,8 +88,17 @@ resource "google_compute_subnetwork" "vertex_ai_subnet" {
 }
 
 resource "google_compute_subnetwork" "cloud_run_subnet" {
-  name          = "cloud-run-subnet"
-  ip_cidr_range = "10.4.0.0/24"
+  name          = "cloudrun-subnet"
+  ip_cidr_range = "10.2.0.0/24"
+  region        = var.region
+  network       = google_compute_network.vpc_network.id
+  depends_on    = [google_project_service.compute_engine]
+  private_ip_google_access = true
+}
+
+resource "google_compute_subnetwork" "dask_clouster_subnet" {
+  name          = "daskclouster-subnet"
+  ip_cidr_range = "10.3.0.0/24"
   region        = var.region
   network       = google_compute_network.vpc_network.id
   depends_on    = [google_project_service.compute_engine]
@@ -135,7 +144,7 @@ resource "google_project_iam_binding" "cloud_run_invoker" {
 ######################
 
 resource "google_workbench_instance" "instance" {
-  name = "workbench-instance"
+  name = "vertex-ai-instance"
   location = var.zone
   disable_proxy_access = true
 
